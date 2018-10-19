@@ -1,5 +1,11 @@
 # dumpia
-I'm trying to write something that can pull images off fantia for me.
+This tool can download an artist's gallery on fantia.
 
 ## Status
-This project is not ready to be used yet and does not do anything.
+It works. But it's rough around the edges. Keep that in mind.
+
+## Dependencies
+I developed it with PHP 7.2, but it should work with PHP 5.x versions aswell.
+It needs the cURL extension, that should be it.
+
+
