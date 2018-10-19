@@ -129,23 +129,28 @@ class Dumpia {
 
 
 		$urlsByPost = array();
+		$countTotal = 0;
+
 		foreach($results as $id) {
 			self::log("Fetching metadata (JSON) for post $id ...");
 
 			$out = $this->getPostPhotos($id);
 			$urlsByPost[$id] = $out;
 
-			self::log("Added " . count($out) . " URLs for post $id.");
-			break;
+			$count = count($out);
+			self::log("Added " . $count . " URLs for post $id.");
+			$countTotal += $count;
 		}
 
-		self::log("Completed collecting URLs - starting download ...");
+		self::log("Collected $countTotal URLs - starting download ...");
 		$this->downloadAll($urlsByPost);
 	}
 
 	private function downloadAll($urlsByPost) {
+		file_put_contents($this->output . "/urls.json", json_encode($urlsByPost));
+
 		foreach($urlsByPost as $p => $urls) {
-			echo "$p: ";
+			echo "Downloading post $p: ";
 			foreach($urls as $n => $u) {
 				preg_match(self::FILETYPE_REGEX, $u, $out);
 				$ext = $out['type'];
@@ -153,9 +158,15 @@ class Dumpia {
 				$tgtdir = $this->output . '/' . $p . '/'; // $output/$postID/$imageNum.$ext
 				if(!is_dir($tgtdir)) mkdir($tgtdir);
 
-				if(copy($u, $tgtdir . "/" . $n . "." . $out['type'])) echo ".";
+				if(@copy($u, $tgtdir . "/" . $n . "." . $out['type'])) echo ".";
 				else echo "!";
+				sleep(1);
 			}
+
+			echo "< w/10s >";
+			sleep(10);
+
+			echo PHP_EOL;
 		}
 	}
 }
