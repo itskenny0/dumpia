@@ -23,8 +23,50 @@ class Dumpia {
 	const ERR_API_HTTP_NOK = "Got HTTP/%s - unable to fetch page.";
 	const ERR_API_NO_MATCHES = "Could not find any post URLs in the gallery. Possibly this fanclub has no posts or the format changed.";
 
-	/* --------------------------------------------- */
+	public function __construct($key, $fanclub, $output) {
+		$this->key = $key;
+		$this->fanclub = $fanclub;
+		$this->output = $output;
+	}
+	
+	public function main() {
+		self::log(self::STR_STARTUP);
 
+		$page = 1; // start at pg1
+		$results = array();
+
+		try {
+
+			while(true) {
+				self::log("Fetching page $page ...");
+				$out = $this->fetchGalleryPage($page);
+				$results = array_merge($results, $out);
+				$page++;
+			}
+
+		} catch (Exception $e) {
+
+			$ct = count($results);
+			self::log("No matches on page $page. Last fetchable page reached - downloading $ct posts.");
+
+		}
+
+		$urlsByPost = array();
+		$countTotal = 0;
+
+		foreach($results as $id) {
+			self::log("Fetching metadata (JSON) for post $id ...");
+
+			$out = $this->getPostPhotos($id);
+
+			$count = count($out);
+			$countTotal += $count;
+			self::log("Downloading " . $count . " URLs for post $id...");
+
+			$this->download($this->output . '/' . $id, $out);
+		}
+	}
+	
 	private static function log($msg) {
 		$pid = getmypid();
 		$date = date("r");
@@ -32,15 +74,7 @@ class Dumpia {
 		$line = "[$date][$pid] $msg" . PHP_EOL;
 		echo $line;
 	}
-
-	/* --------------------------------------------- */
-
-	public function __construct($key, $fanclub, $output) {
-		$this->key = $key;
-		$this->fanclub = $fanclub;
-		$this->output = $output;
-	}
-
+	
 	private function fetch($url) {
 		self::log("cURL: $url");
 		$c = curl_init($url);
@@ -105,45 +139,6 @@ class Dumpia {
 		return $results;
 	}
 
-	public function go() {
-		self::log(self::STR_STARTUP);
-
-		$page = 1; // start at pg1
-		$results = array();
-
-		try {
-
-			while(true) {
-				self::log("Fetching page $page ...");
-				$out = $this->fetchGalleryPage($page);
-				$results = array_merge($results, $out);
-				$page++;
-			}
-
-		} catch (Exception $e) {
-
-			$ct = count($results);
-			self::log("No matches on page $page. Last fetchable page reached - downloading $ct posts.");
-
-		}
-
-
-		$urlsByPost = array();
-		$countTotal = 0;
-
-		foreach($results as $id) {
-			self::log("Fetching metadata (JSON) for post $id ...");
-
-			$out = $this->getPostPhotos($id);
-
-			$count = count($out);
-			$countTotal += $count;
-			self::log("Downloading " . $count . " URLs for post $id...");
-
-			$this->download($this->output . '/' . $id, $out);
-		}
-	}
-
 	private function download($folder, $urls) {
 		if(!is_dir($folder)) mkdir($folder);
 		echo $folder . ": ";
@@ -154,7 +149,6 @@ class Dumpia {
 
 			if(@copy($u, $folder . "/" . $n . "." . $out['type'])) echo ".";
 			else echo "!";
-			sleep(1);
 		}
 
 		echo PHP_EOL;
@@ -170,4 +164,4 @@ if(!isset($options['key']) || !isset($options['fanclub']) || !isset($options['ou
 }
 
 $dumpia = new Dumpia($options['key'], $options['fanclub'], $options['output']);
-$dumpia->go();
+$dumpia->main();
