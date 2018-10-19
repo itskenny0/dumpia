@@ -4,8 +4,7 @@ class Dumpia {
 	private $fanclub;
 
 	const CURL_DEBUG = false;
-
-	const HTML_POST_URL_REGEX = "/\/posts\/[0-9]{1,8}/";
+	const HTML_POST_URL_REGEX = "/\/posts\/(?<id>[0-9]{1,8})/";
 
 	const API_POSTS = "https://fantia.jp/api/v1/posts/%s";
 	const API_FANCLUB = "https://fantia.jp/api/v1/fanclubs/%s";
@@ -13,6 +12,7 @@ class Dumpia {
 
 	const LOG_CURL_FETCHED = "cURL: Got HTTP/%s, received %s bytes.";
 	const LOG_POST_EXTRACT = "Extracted %s posts from page %s.";
+	const LOG_JSON_OK = "JSON: Decode OK";
 
 	const STR_STARTUP = "dumpia - v0 - https://github.com/itskenny0/dumpia";
 
@@ -58,12 +58,12 @@ class Dumpia {
 	}
 
 	private function fetchJSON($type, $id) {
-		echo $url = sprintf($type, $id);
+		$url = sprintf($type, $id);
 		$out = $this->fetch($url);
 
 		$outJ = json_decode($out);
 		if(!is_object($outJ)) throw new Exception(self::ERR_API_NO_JSON . $out);
-		self::log("JSON: Decode OK");
+		self::log(self::LOG_JSON_OK);
 
 		return $outJ;
 	}
@@ -81,9 +81,25 @@ class Dumpia {
 	private function htmlExtractPosts($html) {
 		preg_match_all(self::HTML_POST_URL_REGEX, $html, $out);
 
-		if(empty($out[0])) throw new Exception(self::ERR_API_NO_MATCHES);
+		if(empty($out['id'])) throw new Exception(self::ERR_API_NO_MATCHES);
 
-		return $out[0];
+		return $out['id'];
+	}
+
+
+	private function getPostPhotos($id) {
+		$out = $this->fetchJSON(self::API_POSTS, $id);
+
+		$results = array();
+		foreach($out->post->post_contents as $c) {
+			foreach($c->post_content_photos as $i) {
+				$url = $i->url->original ?: $i->url->main ?: $i->url->large ?: $i->url->medium;
+				if(empty($url)) self::log("Unable to find URL for " . $i->id);
+				$results[] = $url;
+			}
+		}
+
+		return $results;
 	}
 
 	public function go() {
@@ -106,6 +122,17 @@ class Dumpia {
 			$ct = count($results);
 			self::log("No matches on page $page. Last fetchable page reached - downloading $ct posts.");
 
+		}
+
+
+		$urlsByPost = array();
+		foreach($results as $id) {
+			self::log("Fetching metadata (JSON) for post $id ...");
+
+			$out = $this->getPostPhotos($id);
+			$urlsByPost[$id] = $out;
+
+			self::log("Added " . count($out) . " URLs for post $id.");
 		}
 	}
 }
