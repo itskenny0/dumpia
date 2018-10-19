@@ -2,9 +2,11 @@
 class Dumpia {
 	private $key;
 	private $fanclub;
+	private $output;
 
 	const CURL_DEBUG = false;
 	const HTML_POST_URL_REGEX = "/\/posts\/(?<id>[0-9]{1,8})/";
+	const FILETYPE_REGEX = "/\.(?<type>[a-zA-Z]{1,4})\?Key-Pair-Id=/";
 
 	const API_POSTS = "https://fantia.jp/api/v1/posts/%s";
 	const API_FANCLUB = "https://fantia.jp/api/v1/fanclubs/%s";
@@ -16,7 +18,7 @@ class Dumpia {
 
 	const STR_STARTUP = "dumpia - v0 - https://github.com/itskenny0/dumpia";
 
-	const ERR_USAGE = "Usage: php dumpia.php --fanclub 1880 --key AbCdEfGhI31Fjwed234";
+	const ERR_USAGE = "Usage: php dumpia.php --fanclub 1880 --key AbCdEfGhI31Fjwed234 --output /home/user/dumpia/";
 	const ERR_API_NO_JSON = "Invalid API response (JSON decode failed) - API said: ";
 	const ERR_API_HTTP_NOK = "Got HTTP/%s - unable to fetch page.";
 	const ERR_API_NO_MATCHES = "Could not find any post URLs in the gallery. Possibly this fanclub has no posts or the format changed.";
@@ -33,9 +35,10 @@ class Dumpia {
 
 	/* --------------------------------------------- */
 
-	public function __construct($key, $fanclub) {
+	public function __construct($key, $fanclub, $output) {
 		$this->key = $key;
 		$this->fanclub = $fanclub;
+		$this->output = $output;
 	}
 
 	private function fetch($url) {
@@ -133,17 +136,37 @@ class Dumpia {
 			$urlsByPost[$id] = $out;
 
 			self::log("Added " . count($out) . " URLs for post $id.");
+			break;
+		}
+
+		self::log("Completed collecting URLs - starting download ...");
+		$this->downloadAll($urlsByPost);
+	}
+
+	private function downloadAll($urlsByPost) {
+		foreach($urlsByPost as $p => $urls) {
+			echo "$p: ";
+			foreach($urls as $n => $u) {
+				preg_match(self::FILETYPE_REGEX, $u, $out);
+				$ext = $out['type'];
+
+				$tgtdir = $this->output . '/' . $p . '/'; // $output/$postID/$imageNum.$ext
+				if(!is_dir($tgtdir)) mkdir($tgtdir);
+
+				if(copy($u, $tgtdir . "/" . $n . "." . $out['type'])) echo ".";
+				else echo "!";
+			}
 		}
 	}
 }
 
-$cliArgs = array("key:", "fanclub:");
+$cliArgs = array("key:", "fanclub:", "output:");
 
 $options = getopt('', $cliArgs);
-if(!isset($options['key']) || !isset($options['fanclub'])) {
+if(!isset($options['key']) || !isset($options['fanclub']) || !isset($options['output'])) {
 	echo(Dumpia::ERR_USAGE . PHP_EOL);
 	die();
 }
 
-$dumpia = new Dumpia($options['key'], $options['fanclub']);
+$dumpia = new Dumpia($options['key'], $options['fanclub'], $options['output']);
 $dumpia->go();
