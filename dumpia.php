@@ -135,39 +135,29 @@ class Dumpia {
 			self::log("Fetching metadata (JSON) for post $id ...");
 
 			$out = $this->getPostPhotos($id);
-			$urlsByPost[$id] = $out;
 
 			$count = count($out);
-			self::log("Added " . $count . " URLs for post $id.");
 			$countTotal += $count;
-		}
+			self::log("Downloading " . $count . " URLs for post $id...");
 
-		self::log("Collected $countTotal URLs - starting download ...");
-		$this->downloadAll($urlsByPost);
+			$this->download($this->output . '/' . $id, $out);
+		}
 	}
 
-	private function downloadAll($urlsByPost) {
-		file_put_contents($this->output . "/urls.json", json_encode($urlsByPost));
+	private function download($folder, $urls) {
+		if(!is_dir($folder)) mkdir($folder);
+		echo $folder . ": ";
 
-		foreach($urlsByPost as $p => $urls) {
-			echo "Downloading post $p: ";
-			foreach($urls as $n => $u) {
-				preg_match(self::FILETYPE_REGEX, $u, $out);
-				$ext = $out['type'];
+		foreach($urls as $n => $u) {
+			preg_match(self::FILETYPE_REGEX, $u, $out);
+			$ext = $out['type'];
 
-				$tgtdir = $this->output . '/' . $p . '/'; // $output/$postID/$imageNum.$ext
-				if(!is_dir($tgtdir)) mkdir($tgtdir);
-
-				if(@copy($u, $tgtdir . "/" . $n . "." . $out['type'])) echo ".";
-				else echo "!";
-				sleep(1);
-			}
-
-			echo "< w/10s >";
-			sleep(10);
-
-			echo PHP_EOL;
+			if(@copy($u, $folder . "/" . $n . "." . $out['type'])) echo ".";
+			else echo "!";
+			sleep(1);
 		}
+
+		echo PHP_EOL;
 	}
 }
 
