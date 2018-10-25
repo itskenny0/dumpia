@@ -145,14 +145,17 @@ class Dumpia {
 		$out = $this->fetchJSON(self::API_POSTS, $id);
 
 		$results = array();
+		if(isset($out->post->thumb)) $results[] = $out->post->thumb->original ?: $out->post->thumb->main ?: $out->post->thumb->large ?: $out->post->thumb->medium; // cover image
+		
 		foreach($out->post->post_contents as $c) {
+			if(empty($c->post_content_photos)) continue; // if no photos in post, skip to next one
 			foreach($c->post_content_photos as $i) {
 				$url = $i->url->original ?: $i->url->main ?: $i->url->large ?: $i->url->medium;
 				if(empty($url)) self::log(sprintf(self::LOG_NO_URL, $i->id));
 				$results[] = $url;
 			}
 		}
-
+		
 		return $results;
 	}
 
