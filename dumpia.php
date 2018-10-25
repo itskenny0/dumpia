@@ -4,6 +4,7 @@ class Dumpia {
 	private $fanclub;
 	private $output;
 	private $verbose = false;
+	private $downloadExisting = false;
 
 	const CURL_DEBUG = false;
 	
@@ -29,8 +30,9 @@ class Dumpia {
 	const LOG_NO_PHOTOS = "No photos found in post %s (post_content_photos is empty).";
 	const LOG_DOWNLOAD_FIN = "Download finished.";
 	const LOG_DOWNLOAD_SKIPPED = "The following posts had no downloadable photos and were skipped: %s";
+	const LOG_EXISTS_SKIPPED = "Folder exists, skipping: %s";
 
-	const ERR_USAGE = "Usage: php dumpia.php --fanclub 1880 --key AbCdEfGhI31Fjwed234 --output /home/user/dumpia/ [--verbose]";
+	const ERR_USAGE = "Usage: php dumpia.php --fanclub 1880 --key AbCdEfGhI31Fjwed234 --output /home/user/dumpia/ [--verbose] [--downloadExisting]";
 	const ERR_DIR_NOT_EXIST = "The given output directory does not exist.";
 	const ERR_API_NO_JSON = "Invalid API response (JSON decode failed) - API said: ";
 	const ERR_API_HTTP_NOK = "Got HTTP/%s - unable to fetch page.";
@@ -45,6 +47,7 @@ class Dumpia {
 		$this->fanclub = $options['fanclub'];
 		$this->output = $options['output'];
 		if(isset($options['verbose'])) $this->verbose = true;
+		if(isset($options['downloadExisting'])) $this->downloadExisting = true;
 	}
 	
 	public function main() {
@@ -77,6 +80,13 @@ class Dumpia {
 		$countTotal = 0;
 
 		foreach($results as $id) {
+			$downloadPath = $this->output . '/' . $id;
+			
+			if(is_dir($downloadPath) && !$this->downloadExisting) { // if folder exists and --downloadExisting not set
+				self::log(sprintf(self::LOG_EXISTS_SKIPPED, $downloadPath));
+				continue;
+			}
+			
 			if($this->verbose) self::log(sprintf(self::LOG_FETCH_METADATA, $id));
 
 			$out = $this->getPostPhotos($id); // get list of raw URLs from REST API
@@ -90,8 +100,8 @@ class Dumpia {
 			$count = count($out);
 			$countTotal += $count;
 			if($this->verbose) self::log(sprintf(self::LOG_URL_LIST, $count, $id));
-
-			$this->download($this->output . '/' . $id, $out); // download images into a folder named after the post ID
+			
+			$this->download($downloadPath, $out); // download images into a folder named after the post ID
 		}
 		
 		self::log(self::LOG_DOWNLOAD_FIN);
