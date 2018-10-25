@@ -12,3 +12,6 @@ It needs the cURL extension, that should be it.
 You will need to supply a key as an argument.
 The key is the value of the _session_id cookie in your browser when you are logged into the site.
 You can find it using various methods, likely most accessible to you is your browser's developer console.
+
+## Installation
+[![asciicast](https://asciinema.org/a/iv4sioCo0DSEc773H8O8Od0kG.png)](https://asciinema.org/a/iv4sioCo0DSEc773H8O8Od0kG)
