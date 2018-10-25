@@ -31,6 +31,7 @@ class Dumpia {
 	const LOG_DOWNLOAD_SKIPPED = "The following posts had no downloadable photos and were skipped: %s";
 
 	const ERR_USAGE = "Usage: php dumpia.php --fanclub 1880 --key AbCdEfGhI31Fjwed234 --output /home/user/dumpia/ [--verbose]";
+	const ERR_DIR_NOT_EXIST = "The given output directory does not exist.";
 	const ERR_API_NO_JSON = "Invalid API response (JSON decode failed) - API said: ";
 	const ERR_API_HTTP_NOK = "Got HTTP/%s - unable to fetch page.";
 	const ERR_API_NO_MATCHES = "Could not find any post URLs in the gallery. Possibly this fanclub has no posts or the format changed.";
@@ -203,6 +204,11 @@ $cliArgs = array("key:", "fanclub:", "output:", "verbose");
 $options = getopt('', $cliArgs);
 if(!isset($options['key']) || !isset($options['fanclub']) || !isset($options['output'])) {
 	echo(Dumpia::ERR_USAGE . PHP_EOL);
+	die();
+}
+
+if(!is_dir($options['output'])) {
+	echo(Dumpia::ERR_DIR_NOT_EXIST . PHP_EOL);
 	die();
 }
 
