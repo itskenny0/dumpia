@@ -8,7 +8,7 @@ I developed it with PHP 7.2, but it should work with later PHP 5.x versions aswe
 It needs the cURL extension, that should be it.
 
 ## Usage
-<code>php fantia.php --fanclub <id> --key <key> --output <path> [--verbose]</code>
+```php fantia.php --fanclub <id> --key <key> --output <path> [--verbose]```
 
 ### Key
 You will need to supply a key as an argument.
