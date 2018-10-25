@@ -3,34 +3,48 @@ class Dumpia {
 	private $key;
 	private $fanclub;
 	private $output;
+	private $verbose = false;
 
 	const CURL_DEBUG = false;
-	const HTML_POST_URL_REGEX = "/\/posts\/(?<id>[0-9]{1,8})/";
-	const FILETYPE_REGEX = "/\.(?<type>[a-zA-Z]{1,4})\?Key-Pair-Id=/";
-
+	
+	/* Fantia endpoints */
 	const API_POSTS = "https://fantia.jp/api/v1/posts/%s";
 	const API_FANCLUB = "https://fantia.jp/api/v1/fanclubs/%s";
 	const HTML_POSTLIST = "https://fantia.jp/fanclubs/%s/posts?page=%s";
 
+	/* Log format and strings */
+	const LOG_FORMAT = "[%s][%s] %s" . PHP_EOL; // $date, $pid, $msg
+	
+	const LOG_STARTUP = "dumpia - v0.2 - https://github.com/itskenny0/dumpia";
 	const LOG_CURL_FETCHED = "cURL: Got HTTP/%s, received %s bytes.";
 	const LOG_POST_EXTRACT = "Extracted %s posts from page %s.";
 	const LOG_JSON_OK = "JSON: Decode OK";
+	const LOG_LAST_PAGE = "No matches on page %s. Last fetchable page reached.";
+	const LOG_DOWNLOAD_BEGIN = "Downloading %s posts ...";
+	const LOG_FETCH_PAGE = "Attempting to fetch page %s...";
+	const LOG_FETCH_METADATA = "Fetching metadata (JSON) for post %s ...";
+	const LOG_URL_LIST = "Downloading %s URLs for post %s...";
+	const LOG_NO_URL = "Unable to find URL for %s";
+	const LOG_CURL = "cURL: %s";
 
-	const STR_STARTUP = "dumpia - v0 - https://github.com/itskenny0/dumpia";
-
-	const ERR_USAGE = "Usage: php dumpia.php --fanclub 1880 --key AbCdEfGhI31Fjwed234 --output /home/user/dumpia/";
+	const ERR_USAGE = "Usage: php dumpia.php --fanclub 1880 --key AbCdEfGhI31Fjwed234 --output /home/user/dumpia/ [--verbose]";
 	const ERR_API_NO_JSON = "Invalid API response (JSON decode failed) - API said: ";
 	const ERR_API_HTTP_NOK = "Got HTTP/%s - unable to fetch page.";
 	const ERR_API_NO_MATCHES = "Could not find any post URLs in the gallery. Possibly this fanclub has no posts or the format changed.";
+	
+	/* Extraction regexes */
+	const HTML_POST_URL_REGEX = "/\/posts\/(?<id>[0-9]{1,8})/";
+	const FILETYPE_REGEX = "/\.(?<type>[a-zA-Z]{1,4})\?Key-Pair-Id=/";
 
-	public function __construct($key, $fanclub, $output) {
-		$this->key = $key;
-		$this->fanclub = $fanclub;
-		$this->output = $output;
+	public function __construct($options) {
+		$this->key = $options['key'];
+		$this->fanclub = $options['fanclub'];
+		$this->output = $options['output'];
+		if(isset($options['verbose'])) $this->verbose = true;
 	}
 	
 	public function main() {
-		self::log(self::STR_STARTUP);
+		self::log(self::LOG_STARTUP);
 
 		$page = 1; // start at pg1
 		$results = array();
@@ -38,32 +52,35 @@ class Dumpia {
 		try {
 
 			while(true) {
-				self::log("Fetching page $page ...");
-				$out = $this->fetchGalleryPage($page);
-				$results = array_merge($results, $out);
+				self::log(sprintf(self::LOG_FETCH_PAGE, $page));
+				$out = $this->fetchGalleryPage($page); // load gallery (list of post IDs) - extracted from HTML - to do: find the REST endpoint for this, assuming it exists
+				$results = array_merge($results, $out); // add all pages' post IDs into one array
 				$page++;
 			}
 
 		} catch (Exception $e) {
 
+			// exception triggered by fetchGalleryPage indicating the last page was reached
 			$ct = count($results);
-			self::log("No matches on page $page. Last fetchable page reached - downloading $ct posts.");
+			if($this->verbose) self::log(sprintf(self::LOG_LAST_PAGE, $page));
 
 		}
+		
+		self::log(sprintf(self::LOG_DOWNLOAD_BEGIN, $ct));
 
 		$urlsByPost = array();
 		$countTotal = 0;
 
 		foreach($results as $id) {
-			self::log("Fetching metadata (JSON) for post $id ...");
+			if($this->verbose) self::log(sprintf(self::LOG_FETCH_METADATA, $id));
 
-			$out = $this->getPostPhotos($id);
+			$out = $this->getPostPhotos($id); // get list of raw URLs from REST API
 
 			$count = count($out);
 			$countTotal += $count;
-			self::log("Downloading " . $count . " URLs for post $id...");
+			if($this->verbose) self::log(sprintf(self::LOG_URL_LIST, $count, $id));
 
-			$this->download($this->output . '/' . $id, $out);
+			$this->download($this->output . '/' . $id, $out); // download images into a folder named after the post ID
 		}
 	}
 	
@@ -71,25 +88,25 @@ class Dumpia {
 		$pid = getmypid();
 		$date = date("r");
 
-		$line = "[$date][$pid] $msg" . PHP_EOL;
+		$line = sprintf(self::LOG_FORMAT, $date, $pid, $msg);
 		echo $line;
 	}
 	
 	private function fetch($url) {
-		self::log("cURL: $url");
+		if($this->verbose) self::log(sprintf(self::LOG_CURL, $url));
 		$c = curl_init($url);
 
-		curl_setopt($c, CURLOPT_COOKIE, '_session_id=' . $this->key . ';');
+		curl_setopt($c, CURLOPT_COOKIE, '_session_id=' . $this->key . ';'); // sets the sessid cookie to the value of --key at CLI
 		if(self::CURL_DEBUG) curl_setopt($c, CURLOPT_VERBOSE, 1);
 		curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
 
 		$out = curl_exec($c);
-		$httpcode = curl_getinfo($c, CURLINFO_HTTP_CODE);
+		$httpcode = curl_getinfo($c, CURLINFO_HTTP_CODE); // get http code to verify fetch was successful
 		curl_close($c);
 
 		if($httpcode != 200) throw new Exception(sprintf(self::ERR_API_HTTP_NOK, $httpcode));
 
-		self::log(sprintf(self::LOG_CURL_FETCHED, $httpcode, strlen($out)));
+		if($this->verbose) self::log(sprintf(self::LOG_CURL_FETCHED, $httpcode, strlen($out)));
 
 		return $out;
 	}
@@ -100,7 +117,7 @@ class Dumpia {
 
 		$outJ = json_decode($out);
 		if(!is_object($outJ)) throw new Exception(self::ERR_API_NO_JSON . $out);
-		self::log(self::LOG_JSON_OK);
+		if($this->verbose) self::log(self::LOG_JSON_OK);
 
 		return $outJ;
 	}
@@ -111,7 +128,7 @@ class Dumpia {
 
 		$posts = $this->htmlExtractPosts($html);
 
-		self::log(sprintf(self::LOG_POST_EXTRACT, count($posts), $page));
+		if($this->verbose) self::log(sprintf(self::LOG_POST_EXTRACT, count($posts), $page));
 		return $posts;
 	}
 
@@ -131,7 +148,7 @@ class Dumpia {
 		foreach($out->post->post_contents as $c) {
 			foreach($c->post_content_photos as $i) {
 				$url = $i->url->original ?: $i->url->main ?: $i->url->large ?: $i->url->medium;
-				if(empty($url)) self::log("Unable to find URL for " . $i->id);
+				if(empty($url)) self::log(sprintf(self::LOG_NO_URL, $i->id));
 				$results[] = $url;
 			}
 		}
@@ -141,7 +158,8 @@ class Dumpia {
 
 	private function download($folder, $urls) {
 		if(!is_dir($folder)) mkdir($folder);
-		echo $folder . ": ";
+		$ct = count($urls);
+		echo "$folder ($ct URLs): ";
 
 		foreach($urls as $n => $u) {
 			preg_match(self::FILETYPE_REGEX, $u, $out);
@@ -155,7 +173,7 @@ class Dumpia {
 	}
 }
 
-$cliArgs = array("key:", "fanclub:", "output:");
+$cliArgs = array("key:", "fanclub:", "output:", "verbose");
 
 $options = getopt('', $cliArgs);
 if(!isset($options['key']) || !isset($options['fanclub']) || !isset($options['output'])) {
@@ -163,5 +181,5 @@ if(!isset($options['key']) || !isset($options['fanclub']) || !isset($options['ou
 	die();
 }
 
-$dumpia = new Dumpia($options['key'], $options['fanclub'], $options['output']);
+$dumpia = new Dumpia($options);
 $dumpia->main();
