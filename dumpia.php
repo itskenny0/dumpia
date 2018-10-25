@@ -35,7 +35,6 @@ class Dumpia {
 	/* Extraction regexes */
 	const HTML_POST_URL_REGEX = "/\/posts\/(?<id>[0-9]{1,8})/";
 	const FILENAME_REGEX = "/\/(?<name>[^\/]+\.(jpg|jpeg|png|svg|bmp))/";
-	const FILETYPE_REGEX = "/\.(?<type>[a-zA-Z]{1,4})\?Key-Pair-Id=/";
 
 	public function __construct($options) {
 		$this->key = $options['key'];
@@ -169,8 +168,6 @@ class Dumpia {
 			preg_match(self::FILENAME_REGEX, $u, $out);
 
 			if(empty($out['name'])) {
-				echo $u;
-				print_r($out);
 				echo "!";
 				continue;
 			}
