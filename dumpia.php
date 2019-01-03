@@ -16,7 +16,7 @@ class Dumpia {
 	/* Log format and strings */
 	const LOG_FORMAT = "[%s][%s] %s" . PHP_EOL; // $date, $pid, $msg
 	
-	const LOG_STARTUP = "dumpia - v0.2 - https://github.com/itskenny0/dumpia";
+	const LOG_STARTUP = "dumpia - v1.0 - https://github.com/itskenny0/dumpia";
 	const LOG_CURL_FETCHED = "cURL: Got HTTP/%s, received %s bytes.";
 	const LOG_POST_EXTRACT = "Extracted %s posts from page %s.";
 	const LOG_JSON_OK = "JSON: Decode OK";
