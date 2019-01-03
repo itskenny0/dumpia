@@ -201,12 +201,30 @@ class Dumpia {
 			}
 			
 			$name = $out['name'];
-			if(@copy($u, "$folder/$name")) echo ".";
+			if($this->verbose) self::log($u);
+			if($this->curlToDisk($u, "$folder/$name")) echo ".";
 			else echo "!";
 		}
 
 		echo PHP_EOL;
 	}
+
+	private function curlToDisk($url, $target) {
+		$fp = fopen($target, 'w');
+
+		$ch = curl_init($url);
+		curl_setopt($ch, CURLOPT_FILE, $fp);
+		curl_exec($ch);
+
+		$httpC = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+		curl_close($ch);
+		fclose($fp);
+
+		if($httpC == 200) return true;
+		else return false;
+	}
+
 }
 
 $cliArgs = array("key:", "fanclub:", "output:", "verbose");
