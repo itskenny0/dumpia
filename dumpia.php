@@ -213,15 +213,15 @@ class Dumpia {
 	private function curlToDisk($url, $target) {
 		$fp = fopen($target, 'w');
 
-		$ch = curl_init($url);
-		curl_setopt($ch, CURLOPT_FILE, $fp);
-		if(strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE); 
+		$c = curl_init($url);
+		curl_setopt($c, CURLOPT_FILE, $fp);
+		if(strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') curl_setopt($c, CURLOPT_SSL_VERIFYPEER, FALSE); 
 		
-		curl_exec($ch);
+		curl_exec($c);
 
-		$httpC = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+		$httpC = curl_getinfo($c, CURLINFO_HTTP_CODE);
 
-		curl_close($ch);
+		curl_close($c);
 		fclose($fp);
 
 		if($httpC == 200) return true;
