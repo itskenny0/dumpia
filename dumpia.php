@@ -123,6 +123,7 @@ class Dumpia {
 		curl_setopt($c, CURLOPT_COOKIE, '_session_id=' . $this->key . ';'); // sets the sessid cookie to the value of --key at CLI
 		if(self::CURL_DEBUG) curl_setopt($c, CURLOPT_VERBOSE, 1);
 		curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
+		if(strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') curl_setopt($c, CURLOPT_SSL_VERIFYPEER, FALSE); 
 
 		$out = curl_exec($c);
 		$httpcode = curl_getinfo($c, CURLINFO_HTTP_CODE); // get http code to verify fetch was successful
@@ -214,6 +215,8 @@ class Dumpia {
 
 		$ch = curl_init($url);
 		curl_setopt($ch, CURLOPT_FILE, $fp);
+		if(strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE); 
+		
 		curl_exec($ch);
 
 		$httpC = curl_getinfo($ch, CURLINFO_HTTP_CODE);
