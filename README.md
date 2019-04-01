@@ -19,4 +19,4 @@ You can find it using various methods, likely most accessible to you is your bro
 The fanclub parameter takes the fanclub ID you can find in the URL when viewing the fanclub gallery.
 
 ## Installation
-[![asciicast](https://asciinema.org/a/iv4sioCo0DSEc773H8O8Od0kG.png)](https://asciinema.org/a/iv4sioCo0DSEc773H8O8Od0kG)
+[![asciicast](https://asciinema.org/a/yM1E9Ia4U8mTioqVNG8gIEvB4.svg)](https://asciinema.org/a/yM1E9Ia4U8mTioqVNG8gIEvB4)
