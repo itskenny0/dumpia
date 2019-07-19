@@ -184,7 +184,6 @@ class Dumpia {
 			}
 
 			if(!empty($c->download_uri)) {
-				echo "download_uri present: " . $c->download_uri;
 				$results[] = 'https://fantia.jp' . $c->download_uri . '?ofn=' . $c->filename;
 			}
 		}
