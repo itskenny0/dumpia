@@ -175,12 +175,17 @@ class Dumpia {
 		if(empty($out->post->post_contents)) return $results;
 		
 		foreach($out->post->post_contents as $c) {
-			if(empty($c->post_content_photos)) continue;
-			
-			foreach($c->post_content_photos as $i) {
-				$url = $i->url->original ?: $i->url->main ?: $i->url->large ?: $i->url->medium;
-				if(empty($url)) self::log(sprintf(self::LOG_NO_URL, $i->id));
-				$results[] = $url;
+			if(!empty($c->post_content_photos)) {
+				foreach($c->post_content_photos as $i) {
+					$url = $i->url->original ?: $i->url->main ?: $i->url->large ?: $i->url->medium;
+					if(empty($url)) self::log(sprintf(self::LOG_NO_URL, $i->id));
+					$results[] = $url;
+				}
+			}
+
+			if(!empty($c->download_uri)) {
+				echo "download_uri present: " . $c->download_uri;
+				$results[] = 'https://fantia.jp' . $c->download_uri . '?ofn=' . $c->filename;
 			}
 		}
 		
@@ -215,6 +220,8 @@ class Dumpia {
 
 		$c = curl_init($url);
 		curl_setopt($c, CURLOPT_FILE, $fp);
+		curl_setopt($c, CURLOPT_FOLLOWLOCATION, true);
+		curl_setopt($c, CURLOPT_COOKIE, '_session_id=' . $this->key . ';'); 
 		if(strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') curl_setopt($c, CURLOPT_SSL_VERIFYPEER, FALSE); 
 		
 		curl_exec($c);
