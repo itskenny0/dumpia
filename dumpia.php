@@ -41,6 +41,7 @@ class Dumpia {
 	/* Extraction regexes */
 	const HTML_POST_URL_REGEX = "/\/posts\/(?<id>[0-9]{1,8})/";
 	const FILENAME_REGEX = "/\/(?<name>[^\/]+\.(jpg|jpeg|png|svg|bmp|mp4|zip|rar|7z))/i";
+	const OFN_REGEX = '/\?ofn=(?<ofn>.+)$/i';
 
 	public function __construct($options) {
 		$this->key = $options['key'];
@@ -215,6 +216,11 @@ class Dumpia {
 	}
 
 	private function curlToDisk($url, $target) {
+		if(preg_match(self::OFN_REGEX, $target, $out)) {
+			$dir = pathinfo($target, PATHINFO_DIRNAME);
+			$target = $dir . '/' . $out['ofn'];
+		}
+
 		$fp = fopen($target, 'w');
 
 		$c = curl_init($url);
@@ -222,7 +228,7 @@ class Dumpia {
 		curl_setopt($c, CURLOPT_FOLLOWLOCATION, true);
 		curl_setopt($c, CURLOPT_COOKIE, '_session_id=' . $this->key . ';'); 
 		if(strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') curl_setopt($c, CURLOPT_SSL_VERIFYPEER, FALSE); 
-		
+
 		curl_exec($c);
 
 		$httpC = curl_getinfo($c, CURLINFO_HTTP_CODE);
