@@ -221,7 +221,8 @@ class Dumpia {
 			$target = $dir . '/' . $out['ofn'];
 		}
 
-		$fp = fopen($target, 'w');
+		$strDecodedTarget = urldecode($target);
+		$fp = fopen($strDecodedTarget, 'w');
 
 		$c = curl_init($url);
 		curl_setopt($c, CURLOPT_FILE, $fp);
