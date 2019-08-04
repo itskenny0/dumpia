@@ -201,7 +201,6 @@ class Dumpia {
 			preg_match(self::FILENAME_REGEX, $u, $out);
 
 			if(empty($out['name'])) {
-				echo $u;
 				echo "-";
 				continue;
 			}
