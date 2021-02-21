@@ -11,12 +11,13 @@ class Dumpia {
 	/* Fantia endpoints */
 	const API_POSTS = "https://fantia.jp/api/v1/posts/%s";
 	const API_FANCLUB = "https://fantia.jp/api/v1/fanclubs/%s";
+
 	const HTML_POSTLIST = "https://fantia.jp/fanclubs/%s/posts?page=%s";
 
 	/* Log format and strings */
 	const LOG_FORMAT = "[%s][%s] %s" . PHP_EOL; // $date, $pid, $msg
 	
-	const LOG_STARTUP = "dumpia - v1.21 - https://github.com/itskenny0/dumpia";
+	const LOG_STARTUP = "dumpia - v1.3 - https://github.com/itskenny0/dumpia";
 	const LOG_CURL_FETCHED = "cURL: Got HTTP/%s, received %s bytes.";
 	const LOG_POST_EXTRACT = "Extracted %s posts from page %s.";
 	const LOG_JSON_OK = "JSON: Decode OK";
@@ -31,12 +32,14 @@ class Dumpia {
 	const LOG_DOWNLOAD_FIN = "Download finished.";
 	const LOG_DOWNLOAD_SKIPPED = "The following posts had no downloadable photos and were skipped: %s";
 	const LOG_EXISTS_SKIPPED = "Folder exists, skipping: %s";
+	const LOG_PAID_PLAN = "Plan is paid (exitOnFreePlan is set). Continuing."
 
-	const ERR_USAGE = "Usage: php dumpia.php --fanclub 1880 --key AbCdEfGhI31Fjwed234 --output /home/user/dumpia/ [--verbose] [--downloadExisting]";
+	const ERR_USAGE = "Usage: php dumpia.php --fanclub 1880 --key AbCdEfGhI31Fjwed234 --output /home/user/dumpia/ [--verbose] [--downloadExisting] [--exitOnFreePlan]";
 	const ERR_DIR_NOT_EXIST = "The given output directory does not exist.";
 	const ERR_API_NO_JSON = "Invalid API response (JSON decode failed) - API said: ";
 	const ERR_API_HTTP_NOK = "Got HTTP/%s - unable to fetch page.";
 	const ERR_API_NO_MATCHES = "Could not find any post URLs in the gallery. Possibly this fanclub has no posts or the format changed.";
+	const ERR_FREE_PLAN = "exitOnFreePlan is set and there does not seem to be any plan subscribed to. Exiting.";
 	
 	/* Extraction regexes */
 	const HTML_POST_URL_REGEX = "/\/posts\/(?<id>[0-9]{1,8})/";
@@ -49,6 +52,7 @@ class Dumpia {
 		$this->output = $options['output'];
 		if(isset($options['verbose'])) $this->verbose = true;
 		if(isset($options['downloadExisting'])) $this->downloadExisting = true;
+		if(isset($options['exitOnFreePlan'])) $this->exitOnFreePlan = true;
 	}
 	
 	public function main() {
@@ -87,6 +91,7 @@ class Dumpia {
 				self::log(sprintf(self::LOG_EXISTS_SKIPPED, $downloadPath));
 				continue;
 			}
+
 			
 			if($this->verbose) self::log(sprintf(self::LOG_FETCH_METADATA, $id));
 
@@ -144,6 +149,17 @@ class Dumpia {
 		$outJ = json_decode($out);
 		if(!is_object($outJ)) throw new Exception(self::ERR_API_NO_JSON . $out);
 		if($this->verbose) self::log(self::LOG_JSON_OK);
+
+		if($this->exitOnFreePlan) {
+			print_r($outJ);
+			$exit = true; // assume we are not a paying member
+
+			foreach($outJ->post->fanclub->plans as $p) {
+				if($p->price > 0 && $p->order->status == "joined") $exit = false; // if we are paying for any plan, stop assuming
+			}
+
+			if($exit) die(self::ERR_FREE_PLAN);
+		}
 
 		return $outJ;
 	}
@@ -242,7 +258,7 @@ class Dumpia {
 
 }
 
-$cliArgs = array("key:", "fanclub:", "output:", "verbose", "downloadExisting");
+$cliArgs = array("key:", "fanclub:", "output:", "verbose", "downloadExisting", "exitOnFreePlan");
 
 $options = getopt('', $cliArgs);
 if(!isset($options['key']) || !isset($options['fanclub']) || !isset($options['output'])) {
