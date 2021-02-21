@@ -5,6 +5,8 @@ class Dumpia {
 	private $output;
 	private $verbose = false;
 	private $downloadExisting = false;
+	private $exitOnFreePlan = false;
+	private $planVerified = false;
 
 	const CURL_DEBUG = false;
 	
@@ -32,7 +34,7 @@ class Dumpia {
 	const LOG_DOWNLOAD_FIN = "Download finished.";
 	const LOG_DOWNLOAD_SKIPPED = "The following posts had no downloadable photos and were skipped: %s";
 	const LOG_EXISTS_SKIPPED = "Folder exists, skipping: %s";
-	const LOG_PAID_PLAN = "Plan is paid (exitOnFreePlan is set). Continuing."
+	const LOG_PAID_PLAN = "Plan is paid (exitOnFreePlan is set). Continuing.";
 
 	const ERR_USAGE = "Usage: php dumpia.php --fanclub 1880 --key AbCdEfGhI31Fjwed234 --output /home/user/dumpia/ [--verbose] [--downloadExisting] [--exitOnFreePlan]";
 	const ERR_DIR_NOT_EXIST = "The given output directory does not exist.";
@@ -150,15 +152,20 @@ class Dumpia {
 		if(!is_object($outJ)) throw new Exception(self::ERR_API_NO_JSON . $out);
 		if($this->verbose) self::log(self::LOG_JSON_OK);
 
-		if($this->exitOnFreePlan) {
-			print_r($outJ);
+		if($this->exitOnFreePlan && !$this->planVerified) {
 			$exit = true; // assume we are not a paying member
 
 			foreach($outJ->post->fanclub->plans as $p) {
 				if($p->price > 0 && $p->order->status == "joined") $exit = false; // if we are paying for any plan, stop assuming
 			}
 
-			if($exit) die(self::ERR_FREE_PLAN);
+			if($exit) {
+				self::log(self::ERR_FREE_PLAN);
+				die();
+			} else {
+				$this->planVerified = true;
+				self::log(self::LOG_PAID_PLAN);
+			}
 		}
 
 		return $outJ;
