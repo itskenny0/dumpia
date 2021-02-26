@@ -51,6 +51,8 @@ class Dumpia {
 	const ERR_FETCH_FOLLOWING = "Unable to fetch followed fanclubs. Key may be incorrect or user follows no fanclubs.";
 	const ERR_CREATE_DIRECTORY = "Fatal: Failed creating output directory. Please verify paths and permissions.";
 
+	const LOG_VERBOSE_LOGGING = "Verbose logging enabled. dumpia called with options: %s";
+
 	/* Extraction regexes */
 	const HTML_POST_URL_REGEX = "/\/posts\/(?<id>[0-9]{1,8})/";
 	const FILENAME_REGEX = "/\/(?<name>[^\/]+\.(jpg|jpeg|png|svg|bmp|mp4|zip|rar|7z))/i";
@@ -60,7 +62,10 @@ class Dumpia {
 		$this->key = $options['key'];
 		$this->output = $options['output'];
 		if(isset($options['fanclub'])) $this->fanclub = $options['fanclub'];
-		if(isset($options['verbose'])) $this->verbose = true;
+		if(isset($options['verbose'])) {
+			$this->verbose = true;
+			self::log(sprintf(self::LOG_VERBOSE_LOGGING, json_encode($options)));
+		}
 		if(isset($options['downloadExisting'])) $this->downloadExisting = true;
 		if(isset($options['exitOnFreePlan'])) $this->exitOnFreePlan = true;
 		if(isset($options['isRecursive'])) $this->isRecursive = true; // only used internally
@@ -99,6 +104,7 @@ class Dumpia {
 				$dumpia->main();
 			}
 
+			die(PHP_EOL);
 		}
 
 		$page = 1; // start at pg1
@@ -321,7 +327,7 @@ class Dumpia {
 
 }
 
-$cliArgs = array("key:", "fanclub", "output:", "verbose", "downloadExisting", "exitOnFreePlan");
+$cliArgs = array("key:", "fanclub:", "output:", "verbose", "downloadExisting", "exitOnFreePlan");
 
 $options = getopt('', $cliArgs);
 if(!isset($options['key']) || !isset($options['output'])) {
