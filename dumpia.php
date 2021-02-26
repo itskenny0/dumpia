@@ -13,13 +13,14 @@ class Dumpia {
 	/* Fantia endpoints */
 	const API_POSTS = "https://fantia.jp/api/v1/posts/%s";
 	const API_FANCLUB = "https://fantia.jp/api/v1/fanclubs/%s";
+	const API_FOLLOWING = "https://fantia.jp/api/v1/me/fanclubs";
 
 	const HTML_POSTLIST = "https://fantia.jp/fanclubs/%s/posts?page=%s";
 
 	/* Log format and strings */
 	const LOG_FORMAT = "[%s][%s] %s" . PHP_EOL; // $date, $pid, $msg
 	
-	const LOG_STARTUP = "dumpia - v1.3 - https://github.com/itskenny0/dumpia";
+	const LOG_STARTUP = "dumpia - v2.0 - https://github.com/itskenny0/dumpia";
 	const LOG_CURL_FETCHED = "cURL: Got HTTP/%s, received %s bytes.";
 	const LOG_POST_EXTRACT = "Extracted %s posts from page %s.";
 	const LOG_JSON_OK = "JSON: Decode OK";
@@ -36,13 +37,20 @@ class Dumpia {
 	const LOG_EXISTS_SKIPPED = "Folder exists, skipping: %s";
 	const LOG_PAID_PLAN = "Plan is paid (exitOnFreePlan is set). Continuing.";
 
+	const LOG_NO_FANCLUB_ARG = "No fanclub given. Getting list of followed fanclubs ...";
+	const LOG_GOT_FANCLUBS = "Followed fanclubs: %s";
+	const LOG_NEW_DUMPIA = "Recursively starting new instance of dumpia for fanclub %s.";
+	const LOG_CREATE_DIRECTORY = "Creating output directory for %s.";
+
 	const ERR_USAGE = "Usage: php dumpia.php --fanclub 1880 --key AbCdEfGhI31Fjwed234 --output /home/user/dumpia/ [--verbose] [--downloadExisting] [--exitOnFreePlan]";
 	const ERR_DIR_NOT_EXIST = "The given output directory does not exist.";
 	const ERR_API_NO_JSON = "Invalid API response (JSON decode failed) - API said: ";
 	const ERR_API_HTTP_NOK = "Got HTTP/%s - unable to fetch page.";
 	const ERR_API_NO_MATCHES = "Could not find any post URLs in the gallery. Possibly this fanclub has no posts or the format changed.";
 	const ERR_FREE_PLAN = "exitOnFreePlan is set and there does not seem to be any plan subscribed to. Exiting.";
-	
+	const ERR_FETCH_FOLLOWING = "Unable to fetch followed fanclubs. Key may be incorrect or user follows no fanclubs.";
+	const ERR_CREATE_DIRECTORY = "Fatal: Failed creating output directory. Please verify paths and permissions.";
+
 	/* Extraction regexes */
 	const HTML_POST_URL_REGEX = "/\/posts\/(?<id>[0-9]{1,8})/";
 	const FILENAME_REGEX = "/\/(?<name>[^\/]+\.(jpg|jpeg|png|svg|bmp|mp4|zip|rar|7z))/i";
@@ -50,15 +58,48 @@ class Dumpia {
 
 	public function __construct($options) {
 		$this->key = $options['key'];
-		$this->fanclub = $options['fanclub'];
 		$this->output = $options['output'];
+		if(isset($options['fanclub'])) $this->fanclub = $options['fanclub'];
 		if(isset($options['verbose'])) $this->verbose = true;
 		if(isset($options['downloadExisting'])) $this->downloadExisting = true;
 		if(isset($options['exitOnFreePlan'])) $this->exitOnFreePlan = true;
+		if(isset($options['isRecursive'])) $this->isRecursive = true; // only used internally
+
+		if(!isset($options['fanclub'])) $this->options = $options; // keep backup of options when no fanclub is given as dumpia recursively calls itself
 	}
-	
+
 	public function main() {
 		self::log(self::LOG_STARTUP);
+
+		if(!isset($this->fanclub)) {
+			self::log(self::LOG_NO_FANCLUB_ARG);
+
+			$fanclubs = $this->fetchFollowing();
+
+			if($fanclubs !== false) {
+				self::log(sprintf(self::LOG_GOT_FANCLUBS, implode(" ", $fanclubs)));
+			} else {
+				die();
+			}
+
+			foreach($fanclubs as $f) {
+				$tmp = $this->options;
+				$tmp['output'] = $tmp['output'] . '/' . $f;
+				$tmp['fanclub'] = $f;
+				$tmp['isRecursive'] = true;
+
+				if(!is_dir($tmp['output'])) {
+					self::log(sprintf(self::LOG_CREATE_DIRECTORY, $f));
+					mkdir($tmp['output']) || die(self::ERR_CREATE_DIRECTORY);
+				}
+
+				self::log(sprintf(self::LOG_NEW_DUMPIA, $f));
+
+				$dumpia = new Dumpia($tmp);
+				$dumpia->main();
+			}
+
+		}
 
 		$page = 1; // start at pg1
 		$results = array();
@@ -98,6 +139,7 @@ class Dumpia {
 			if($this->verbose) self::log(sprintf(self::LOG_FETCH_METADATA, $id));
 
 			$out = $this->getPostPhotos($id); // get list of raw URLs from REST API
+			if($out === false) return false;
 			
 			if(empty($out)) {
 				if($this->verbose) self::log(sprintf(self::LOG_NO_PHOTOS, $id));
@@ -144,6 +186,18 @@ class Dumpia {
 		return $out;
 	}
 
+	public function fetchFollowing() {
+		$out = $this->fetch(self::API_FOLLOWING);
+		$outJ = json_decode($out);
+
+		if(!$outJ->result === 1 || empty($outJ->fanclub_ids)) {
+			self::log(self::LOG_ERROR_FETCH_FOLLOWING);
+			return false;
+		}
+
+		return $outJ->fanclub_ids;
+	}
+
 	private function fetchJSON($type, $id) {
 		$url = sprintf($type, $id);
 		$out = $this->fetch($url);
@@ -161,7 +215,8 @@ class Dumpia {
 
 			if($exit) {
 				self::log(self::ERR_FREE_PLAN);
-				die();
+				if(!$this->isRecursive)	die();
+				else return false;
 			} else {
 				$this->planVerified = true;
 				self::log(self::LOG_PAID_PLAN);
@@ -192,6 +247,7 @@ class Dumpia {
 
 	private function getPostPhotos($id) {
 		$out = $this->fetchJSON(self::API_POSTS, $id);
+		if($out === false) return false;
 
 		$results = array();
 		if(isset($out->post->thumb)) $results[] = $out->post->thumb->original ?: $out->post->thumb->main ?: $out->post->thumb->large ?: $out->post->thumb->medium; // cover image
@@ -265,10 +321,10 @@ class Dumpia {
 
 }
 
-$cliArgs = array("key:", "fanclub:", "output:", "verbose", "downloadExisting", "exitOnFreePlan");
+$cliArgs = array("key:", "fanclub", "output:", "verbose", "downloadExisting", "exitOnFreePlan");
 
 $options = getopt('', $cliArgs);
-if(!isset($options['key']) || !isset($options['fanclub']) || !isset($options['output'])) {
+if(!isset($options['key']) || !isset($options['output'])) {
 	echo(Dumpia::ERR_USAGE . PHP_EOL);
 	die();
 }
