@@ -42,7 +42,7 @@ class Dumpia {
 	const LOG_NEW_DUMPIA = "Recursively starting new instance of dumpia for fanclub %s.";
 	const LOG_CREATE_DIRECTORY = "Creating output directory for %s.";
 
-	const ERR_USAGE = "Usage: php dumpia.php --fanclub 1880 --key AbCdEfGhI31Fjwed234 --output /home/user/dumpia/ [--verbose] [--downloadExisting] [--exitOnFreePlan]";
+	const ERR_USAGE = "Usage: php dumpia.php --key AbCdEfGhI31Fjwed234 --output /home/user/dumpia/ [--fanclub 1] [--verbose] [--downloadExisting] [--exitOnFreePlan]";
 	const ERR_DIR_NOT_EXIST = "The given output directory does not exist.";
 	const ERR_API_NO_JSON = "Invalid API response (JSON decode failed) - API said: ";
 	const ERR_API_HTTP_NOK = "Got HTTP/%s - unable to fetch page.";
