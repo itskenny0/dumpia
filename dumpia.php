@@ -55,7 +55,7 @@ class Dumpia {
 
 	/* Extraction regexes */
 	const HTML_POST_URL_REGEX = "/\/posts\/(?<id>[0-9]{1,8})/";
-	const FILENAME_REGEX = "/\/(?<name>[^\/]+\.(jpg|jpeg|png|svg|bmp|mp4|zip|rar|7z))/i";
+	const FILENAME_REGEX = "/\/(?<name>[^\/]+\.(jpg|jpeg|png|svg|bmp|mp4|zip|rar|7z|psd|clip))/i";
 	const OFN_REGEX = '/\?ofn=(?<ofn>.+)$/i';
 
 	public function __construct($options) {
