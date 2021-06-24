@@ -1,4 +1,4 @@
-#### [日本語向けReadme🗾](github.com/L4Ph/dumpia/blob/master/README.ja.md)  
+#### [日本語向けReadme🗾](https://github.com/L4Ph/dumpia/blob/master/README.ja.md)  
 
 # dumpia
 ## What is this?
