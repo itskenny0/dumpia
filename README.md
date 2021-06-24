@@ -1,3 +1,5 @@
+#### [日本語向けReadme🗾](https://github.com/L4Ph/dumpia/blob/master/README.ja.md)  
+
 # dumpia
 ## What is this?
 This is a PHP script that can download all posts in a fanclub on fantia.jp that you are authorized to access.
@@ -6,6 +8,11 @@ It does not allow you to circumvent any paywalls.
 ## Dependencies
 I developed it with PHP 7.2, but it should work with later PHP 5.x versions aswell.
 It needs the cURL extension, that should be it.
+
+## Easy Usage
+Just specify the output directory in dumpia.sh and type ./dumpia.sh.  
+After entering the IDs, a directory for each ID will be created automatically, and the files will be downloaded into that directory.  
+If you want to use ```[--verbose] [--downloadExisting] [--exitOnFreePlan],``` please add it in line 5
 
 ## Usage
 ```php dumpia.php --key <key> --output <path> [--fanclub <id>] [--verbose] [--downloadExisting] [--exitOnFreePlan]```
