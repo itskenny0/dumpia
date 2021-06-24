@@ -1,3 +1,5 @@
+#### [日本語向けReadme🗾](github.com/L4Ph/dumpia/blob/master/README.ja.md)  
+
 # dumpia
 ## What is this?
 This is a PHP script that can download all posts in a fanclub on fantia.jp that you are authorized to access.
