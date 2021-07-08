@@ -197,7 +197,7 @@ class Dumpia {
 		$outJ = json_decode($out);
 
 		if(!$outJ->result === 1 || empty($outJ->fanclub_ids)) {
-			self::log(self::LOG_ERROR_FETCH_FOLLOWING);
+			self::log(self::ERR_FETCH_FOLLOWING);
 			return false;
 		}
 
