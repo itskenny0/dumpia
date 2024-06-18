@@ -1,3 +1,7 @@
+I no longer use fantia, therefore have no way of testing it. I knwo it is currently broken.
+If someone can provide a token with access to a paid plan fanclub to play with, I can probably make the script work again.
+Until then, it will lie dormant.
+
 # dumpia
 ## What is this?
 This is a PHP script that can download all posts in a fanclub on fantia.jp that you are authorized to access.
